@@ -1,0 +1,44 @@
+name: Exportar paginas Viajes y Negocio para Drive
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/exportar-paginas-borja.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  exportar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Empaquetar exactamente los archivos aprobados de GitHub
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p paquete/viajes paquete/negocio
+          cp viajes.html negocio.html index.html paquete/
+          cp -R assets paquete/
+          cp viajes/index.html paquete/viajes/index.html
+          cp negocio/index.html paquete/negocio/index.html
+          cat > paquete/URLS_Y_ORIGEN.txt <<'EOF'
+          VIAJES: https://agarciarodriguez74-ui.github.io/viajes-y-negocio/viajes/
+          NEGOCIO: https://agarciarodriguez74-ui.github.io/viajes-y-negocio/negocio/
+          FUENTE: https://github.com/agarciarodriguez74-ui/viajes-y-negocio
+          ORIGINALES: viajes.html y negocio.html
+          Este ZIP es una copia exacta de los archivos web de GitHub en el commit indicado en COMMIT.txt.
+          Los videos externos de YouTube se cargan por Internet; no se redistribuyen.
+          EOF
+          git rev-parse HEAD > paquete/COMMIT.txt
+          (cd paquete && find . -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt)
+          test -s paquete/viajes.html
+          test -s paquete/negocio.html
+          test -s paquete/assets/comunidad-convencion.webp
+          test -s paquete/assets/comunidad-belgrado.webp
+      - name: Publicar ZIP descargable
+        uses: actions/upload-artifact@v4
+        with:
+          name: borja-viajes-negocio-web-definitiva
+          path: paquete/
+          if-no-files-found: error
+          retention-days: 30
